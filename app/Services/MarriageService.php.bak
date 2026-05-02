@@ -1,0 +1,542 @@
+<?php
+namespace App\Services;
+
+class MarriageService
+{
+    private $rasis = ['Mesha','Vrishabha','Mithuna','Karka','Simha','Kanni','Tula','Vrischika','Dhanusu','Makara','Kumbha','Meena'];
+    private $planets = ['Sun','Moon','Mars','Mercury','Jupiter','Venus','Saturn','Rahu','Ketu'];
+
+    // Lord of each rasi (0=Mesha...11=Meena)
+    private $rasiLords = ['Mars','Venus','Mercury','Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Saturn','Jupiter'];
+
+    // Benefics & Malefics
+    private $benefics = ['Jupiter','Venus','Mercury','Moon'];
+    private $malefics = ['Sun','Mars','Saturn','Rahu','Ketu'];
+
+    public function predict(array $planetPositions, int $lagnaRasiIdx, string $gender = 'male'): array
+    {
+        // 7th house = lagna + 6 (0-indexed)
+        $seventhHouseRasi = ($lagnaRasiIdx + 6) % 12;
+        $seventhLord = $this->rasiLords[$seventhHouseRasi];
+
+        // Where is the 7th lord placed?
+        $seventhLordPos = $planetPositions[$seventhLord] ?? 0;
+        $seventhLordHouse = ((int)($seventhLordPos / 30) - $lagnaRasiIdx + 12) % 12 + 1;
+
+        // Venus position (key for marriage)
+        $venusPos   = $planetPositions['Venus']   ?? 0;
+        $venusHouse = ((int)($venusPos / 30) - $lagnaRasiIdx + 12) % 12 + 1;
+
+        // Jupiter position
+        $jupiterPos   = $planetPositions['Jupiter']   ?? 0;
+        $jupiterHouse = ((int)($jupiterPos / 30) - $lagnaRasiIdx + 12) % 12 + 1;
+
+        // Saturn position
+        $saturnPos   = $planetPositions['Saturn']   ?? 0;
+        $saturnHouse = ((int)($saturnPos / 30) - $lagnaRasiIdx + 12) % 12 + 1;
+
+        // Rahu & Ketu
+        $rahuPos   = $planetPositions['Rahu'] ?? 0;
+        $rahuHouse = ((int)($rahuPos / 30) - $lagnaRasiIdx + 12) % 12 + 1;
+        $ketuHouse = ((int)(fmod($rahuPos + 180, 360) / 30) - $lagnaRasiIdx + 12) % 12 + 1;
+
+        // Mars (Mangal Dosha)
+        $marsPos   = $planetPositions['Mars'] ?? 0;
+        $marsHouse = ((int)($marsPos / 30) - $lagnaRasiIdx + 12) % 12 + 1;
+
+        // ── PROMISED MARRIAGE ──
+        $promisedReasons = [];
+        $deniedReasons   = [];
+        $delayedReasons  = [];
+
+        // Benefics in 1st or 7th → promise
+        if (in_array($venusHouse, [1, 7])) {
+            $promisedReasons[] = 'Venus is in the ' . $this->ordinal($venusHouse) . ' house — marriage is strongly promised.';
+        }
+        if (in_array($jupiterHouse, [1, 7])) {
+            $promisedReasons[] = 'Jupiter aspects/occupies a key house — auspicious for marriage.';
+        }
+        // 7th lord NOT in 6, 8, 12 → promise
+        if (!in_array($seventhLordHouse, [6, 8, 12])) {
+            $promisedReasons[] = "The 7th lord ({$seventhLord}) is in the {$this->ordinal($seventhLordHouse)} house — marriage will happen at the right time.";
+        }
+
+        // Denial indicators
+        if ($ketuHouse == 7) {
+            $deniedReasons[] = 'Ketu in the 7th house creates obstacles and may deny or delay marriage.';
+        }
+        if ($rahuHouse == 7) {
+            $deniedReasons[] = 'Rahu in the 7th house may cause unconventional or troubled marriage.';
+        }
+        if (in_array($seventhLordHouse, [6, 8, 12])) {
+            $deniedReasons[] = "7th lord {$seventhLord} placed in {$this->ordinal($seventhLordHouse)} house weakens marriage prospects.";
+        }
+
+        // Delay indicators
+        if (in_array($saturnHouse, [7, 1, 9])) {
+            $delayedReasons[] = "Saturn in the {$this->ordinal($saturnHouse)} house delays marriage.";
+        }
+        if (in_array($saturnHouse, [7])) {
+            $delayedReasons[] = 'Saturn directly in 7th — marriage will be delayed but stable.';
+        }
+
+        // ── LOVE vs ARRANGED ──
+        $loveScore = 0;
+        // Venus in 1,5,7,11 → love
+        if (in_array($venusHouse, [1, 5, 7, 11])) $loveScore += 3;
+        // Rahu in 7 → love/inter-caste
+        if ($rahuHouse == 7) $loveScore += 2;
+        // 5th lord & 7th lord conjunct → love
+        $fifthHouseRasi = ($lagnaRasiIdx + 4) % 12;
+        $fifthLord = $this->rasiLords[$fifthHouseRasi];
+        $fifthLordPos  = $planetPositions[$fifthLord] ?? 0;
+        $fifthLordHouse = ((int)($fifthLordPos / 30) - $lagnaRasiIdx + 12) % 12 + 1;
+        if ($fifthLordHouse == $seventhLordHouse) $loveScore += 2;
+
+        $loveOrArranged = $loveScore >= 3 ? 'Love Marriage' : 'Arranged Marriage';
+        $loveConfidence = min(95, 50 + ($loveScore * 8));
+
+        // ── MANGAL DOSHA ──
+        $mangalDosha = in_array($marsHouse, [1, 2, 4, 7, 8, 12]);
+        $mangalSeverity = 'None';
+        if ($mangalDosha) {
+            $mangalSeverity = in_array($marsHouse, [7, 8]) ? 'High' : 'Moderate';
+        }
+
+        // ── MARRIAGE TIMING (Dasha-based approximation) ──
+        $timingMessage = $this->estimateMarriageTiming($planetPositions, $lagnaRasiIdx);
+
+        // ── SPOUSE NATURE ──
+        $spouseNature = $this->getSpouseNature($seventhLord, $seventhLordHouse, $venusHouse);
+
+        // ── MARRIED LIFE QUALITY ──
+        $marriedLifeScore = 70;
+        if (count($deniedReasons) > 0)  $marriedLifeScore -= 15;
+        if ($mangalDosha)               $marriedLifeScore -= 10;
+        if (count($promisedReasons) > 2) $marriedLifeScore += 10;
+        if (in_array($jupiterHouse, [1,5,7,9])) $marriedLifeScore += 10;
+        $marriedLifeScore = max(20, min(98, $marriedLifeScore));
+
+        // ── REMEDIES ──
+        $remedies = $this->getRemedies($mangalDosha, $deniedReasons, $delayedReasons);
+
+        return [
+            'lagna_rasi'       => $this->rasis[$lagnaRasiIdx],
+            'seventh_house'    => $this->rasis[$seventhHouseRasi],
+            'seventh_lord'     => $seventhLord,
+            'seventh_lord_house' => $seventhLordHouse,
+            'venus_house'      => $venusHouse,
+            'jupiter_house'    => $jupiterHouse,
+            'saturn_house'     => $saturnHouse,
+
+            'promised_marriage'  => count($promisedReasons) > count($deniedReasons),
+            'promised_reasons'   => $promisedReasons,
+            'denied_reasons'     => $deniedReasons,
+            'delayed_reasons'    => $delayedReasons,
+            'is_delayed'         => count($delayedReasons) > 0,
+            'is_denied'          => count($deniedReasons) > count($promisedReasons),
+
+            'love_or_arranged'   => $loveOrArranged,
+            'love_confidence'    => $loveConfidence,
+            'love_score'         => $loveScore,
+
+            'mangal_dosha'       => $mangalDosha,
+            'mangal_dosha_house' => $marsHouse,
+            'mangal_severity'    => $mangalSeverity,
+
+            'marriage_timing'    => $timingMessage,
+            'spouse_nature'      => $spouseNature,
+            'married_life_score' => $marriedLifeScore,
+            'remedies'           => $remedies,
+        ];
+    }
+
+    private function estimateMarriageTiming(array $positions, int $lagnaRasiIdx): array
+    {
+        // Venus & Jupiter Dasha periods are most favorable for marriage
+        $favorable = [];
+        $venusPos   = $positions['Venus'] ?? 0;
+        $jupiterPos = $positions['Jupiter'] ?? 0;
+
+        // Very simplified Dasha estimate
+        $favorable[] = 'Venus Mahadasha / Antardasha period is highly favorable.';
+        $favorable[] = 'Jupiter Mahadasha / Antardasha period strongly indicates marriage.';
+        $favorable[] = '7th lord Dasha period is a key window for marriage.';
+
+        // Age range estimate based on 7th house
+        $seventhHouseRasi = ($lagnaRasiIdx + 6) % 12;
+        $seventhLord = $this->rasiLords[$seventhHouseRasi];
+        $saturnPos   = $positions['Saturn'] ?? 0;
+        $saturnHouse = ((int)($saturnPos / 30) - $lagnaRasiIdx + 12) % 12 + 1;
+
+        $ageRange = in_array($saturnHouse, [1,7,9]) ? '26 – 32 years' : '22 – 28 years';
+
+        return [
+            'age_range'        => $ageRange,
+            'favorable_dashas' => $favorable,
+            'note'             => 'Exact timing requires precise birth time and location for Dasha calculation.',
+        ];
+    }
+
+    private function getSpouseNature(string $seventhLord, int $seventhLordHouse, int $venusHouse): array
+    {
+        $traits = [
+            'Sun'     => ['Confident', 'Authoritative', 'Proud', 'Leader'],
+            'Moon'    => ['Emotional', 'Caring', 'Sensitive', 'Intuitive'],
+            'Mars'    => ['Energetic', 'Ambitious', 'Bold', 'Athletic'],
+            'Mercury' => ['Intelligent', 'Communicative', 'Witty', 'Business-minded'],
+            'Jupiter' => ['Wise', 'Generous', 'Spiritual', 'Educated'],
+            'Venus'   => ['Beautiful', 'Artistic', 'Charming', 'Loving'],
+            'Saturn'  => ['Mature', 'Disciplined', 'Hard-working', 'Serious'],
+            'Rahu'    => ['Unconventional', 'Ambitious', 'Tech-savvy'],
+            'Ketu'    => ['Spiritual', 'Detached', 'Mysterious'],
+        ];
+
+        $appearance = [
+            'Jupiter' => 'Well-built, fair complexion, wise appearance',
+            'Venus'   => 'Beautiful, graceful, attractive features',
+            'Mercury' => 'Youthful, sharp features, medium height',
+            'Moon'    => 'Round face, pleasant, fair-skinned',
+            'Mars'    => 'Athletic build, medium height, energetic',
+            'Saturn'  => 'Tall, dark, lean, mature-looking',
+            'Sun'     => 'Dignified, medium height, commanding',
+        ];
+
+        return [
+            'personality'  => $traits[$seventhLord] ?? ['Balanced', 'Stable'],
+            'appearance'   => $appearance[$seventhLord] ?? 'Pleasant and well-mannered',
+            'direction'    => $this->getSpouseDirection($seventhLord),
+            'description'  => "Your spouse is likely to be {$traits[$seventhLord][0]} and {$traits[$seventhLord][1]} in nature, influenced by {$seventhLord} as the 7th lord.",
+        ];
+    }
+
+    private function getSpouseDirection(string $lord): string
+    {
+        $directions = ['Sun'=>'East','Moon'=>'North-West','Mars'=>'South','Mercury'=>'North','Jupiter'=>'North-East','Venus'=>'South-East','Saturn'=>'West'];
+        return $directions[$lord] ?? 'North';
+    }
+
+    private function getRemedies(bool $mangalDosha, array $denied, array $delayed): array
+    {
+        $remedies = [];
+        if ($mangalDosha) {
+            $remedies[] = '🔴 Mangal Dosha: Perform Mangal Puja on Tuesdays. Chant "Om Angarakaya Namaha" 108 times.';
+            $remedies[] = '💎 Wear Red Coral (Moonga) in gold ring on right hand ring finger on Tuesday.';
+        }
+        if (count($delayed) > 0) {
+            $remedies[] = '🪐 Saturn delay remedy: Worship Lord Shiva every Saturday. Offer sesame (til) to Shani Dev.';
+            $remedies[] = '🌿 Fast on Fridays and worship Goddess Parvati for early marriage.';
+        }
+        if (count($denied) > 0) {
+            $remedies[] = '🙏 Perform Swayamvara Parvathi Homam to remove marriage obstacles.';
+            $remedies[] = '💛 Chant "Om Namah Shivaya" and "Om Hreem Namah" 108 times daily.';
+        }
+        $remedies[] = '💍 Wear Diamond or White Sapphire (Heera/Safed Pukhraj) to strengthen Venus.';
+        $remedies[] = '🌸 Offer yellow flowers to Lord Vishnu on Thursdays for a blessed marriage.';
+        return $remedies;
+    }
+
+    private function ordinal(int $n): string
+    {
+        $suffix = ['th','st','nd','rd'];
+        $v = $n % 100;
+        return $n . ($suffix[($v - 20) % 10] ?? $suffix[min($v, 3)] ?? $suffix[0]);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // DASHA-BASED MARRIAGE TIMING
+    // Step 1: Calculate Vimshottari Dasha from birth Nakshatra
+    // Step 2: Find the Mahadasha/Antardasha window for marriage
+    // Step 3: Return ONLY auspicious muhurta dates within that window
+    // ══════════════════════════════════════════════════════════════
+    public function getPeakMarriageDays(int $birthDay, int $birthMonth, int $birthYear, float $moonSidereal, string $seventhLord): array
+    {
+        $astrologyService = new AstrologyService();
+
+        // ── DASHA MAPPING ──
+        // Each nakshatra (0-26) maps to a starting planet
+        $nakshatraLord = [
+            0 =>'Ketu', 1 =>'Venus',   2 =>'Sun',    3 =>'Moon',    4 =>'Mars',
+            5 =>'Rahu',  6 =>'Jupiter', 7 =>'Saturn',  8 =>'Mercury',
+            9 =>'Ketu', 10=>'Venus',   11=>'Sun',    12=>'Moon',    13=>'Mars',
+            14=>'Rahu',  15=>'Jupiter', 16=>'Saturn',  17=>'Mercury', 18=>'Ketu',
+            19=>'Venus',  20=>'Sun',    21=>'Moon',    22=>'Mars',    23=>'Rahu',
+            24=>'Jupiter',25=>'Saturn',  26=>'Mercury'
+        ];
+        $dashaYears = ['Ketu'=>7,'Venus'=>20,'Sun'=>6,'Moon'=>10,'Mars'=>7,'Rahu'=>18,'Jupiter'=>16,'Saturn'=>19,'Mercury'=>17];
+        $dashaOrder = ['Ketu','Venus','Sun','Moon','Mars','Rahu','Jupiter','Saturn','Mercury'];
+
+        // Marriage-favorable Mahadashas
+        $marriageDashas = ['Venus', 'Jupiter', $seventhLord];
+
+        // Nakshatra of Moon at birth
+        $starIdx    = (int)($moonSidereal / (360 / 27));
+        $startLord  = $nakshatraLord[$starIdx];
+        $startDashaIdx = array_search($startLord, $dashaOrder);
+
+        // How far into the first nakshatra (balance of first dasha)
+        $starWidth    = 360 / 27;
+        $posInStar    = fmod($moonSidereal, $starWidth);
+        $balance      = 1 - ($posInStar / $starWidth); // fraction remaining
+
+        // Build Dasha timeline from birth
+        $birthDate  = new \DateTime("{$birthYear}-{$birthMonth}-{$birthDay}");
+        $current    = clone $birthDate;
+        $dashas     = [];
+
+        for ($i = 0; $i < 9; $i++) {
+            $planetIdx = ($startDashaIdx + $i) % 9;
+            $planet    = $dashaOrder[$planetIdx];
+            $years     = $i === 0
+                ? $dashaYears[$planet] * $balance
+                : $dashaYears[$planet];
+
+            $days      = (int)round($years * 365.25);
+            $start     = clone $current;
+            $current->modify("+{$days} days");
+            $end       = clone $current;
+
+            $dashas[] = [
+                'planet' => $planet,
+                'start'  => clone $start,
+                'end'    => clone $end,
+                'years'  => round($years, 1),
+                'start_str' => $start->format('M Y'),
+                'end_str'   => $end->format('M Y'),
+            ];
+        }
+
+        // ── FIND MARRIAGE WINDOW ──
+        // The window is the FIRST marriage-favorable Mahadasha that is in future
+        $now = new \DateTime('now');
+        $marriageWindow = null;
+        $marriageDasha  = null;
+
+        foreach ($dashas as $dasha) {
+            if (!in_array($dasha['planet'], $marriageDashas)) continue;
+            // If dasha is completely in the past, skip
+            if ($dasha['end'] < $now) continue;
+
+            $marriageDasha  = $dasha;
+            // Window starts from today if currently in this dasha, else from dasha start
+            $windowStart    = max($now, $dasha['start']);
+            $windowEnd      = $dasha['end'];
+            $marriageWindow = ['start' => $windowStart, 'end' => $windowEnd];
+            break;
+        }
+
+        // If no future marriage dasha found, use next 3 years as fallback
+        if (!$marriageWindow) {
+            $marriageWindow = ['start' => $now, 'end' => (clone $now)->modify('+3 years')];
+        }
+
+        // ── GOOD MUHURTA FILTER within the marriage window ──
+        $goodTithis     = [2, 3, 5, 7, 10, 11, 13];
+        $badTithis      = [4, 9, 14, 29, 30];
+        $goodVaras      = [1, 3, 4, 5];      // Mon, Wed, Thu, Fri
+        $badVaras       = [0, 2, 6];
+        $goodNakshatras = [3, 4, 9, 11, 12, 14, 16, 20, 25, 26];
+        $badNakshatras  = [22, 23, 24];      // strict panchakam
+        $goodYogas      = [2, 3, 4, 10, 11, 13, 15, 21, 22, 23];
+        $badYogas       = [0, 5, 8, 9, 12, 14, 16, 18, 26];
+
+        $yogaNames = ['Vishkamba','Preeti','Ayushman','Saubhagya','Shobhana','Atiganda',
+                      'Sukarman','Dhriti','Shoola','Ganda','Vriddhi','Dhruva','Vyaghata',
+                      'Harshana','Vajra','Siddhi','Vyatipata','Variyan','Parigha','Shiva',
+                      'Siddha','Sadhya','Shubha','Shukla','Brahma','Indra','Vaidhriti'];
+        $stars     = ['Aswini','Bharani','Karthigai','Rohini','Mirugaseerisham','Thiruvathirai',
+                      'Punarpusam','Poosam','Ayilyam','Magam','Pooram','Uthiram','Hastham',
+                      'Chithirai','Swathi','Visakam','Anusham','Kettai','Moolam','Pooradam',
+                      'Uthiradam','Thiruvonam','Avittam','Sadhayam','Pooratathi','Uthiratathi','Revathi'];
+        $varaNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        $tithiNames= [1=>'Pratipada',2=>'Dwitiya',3=>'Tritiya',4=>'Chaturthi',5=>'Panchami',
+                      6=>'Shashthi',7=>'Saptami',8=>'Ashtami',9=>'Navami',10=>'Dashami',
+                      11=>'Ekadashi',12=>'Dwadashi',13=>'Trayodashi',14=>'Chaturdashi',15=>'Purnima',
+                      16=>'Pratipada',17=>'Dwitiya',18=>'Tritiya',19=>'Chaturthi',20=>'Panchami',
+                      21=>'Shashthi',22=>'Saptami',23=>'Ashtami',24=>'Navami',25=>'Dashami',
+                      26=>'Ekadashi',27=>'Dwadashi',28=>'Trayodashi',29=>'Chaturdashi',30=>'Amavasya'];
+
+        $scored   = [];
+        $scanDate = clone $marriageWindow['start'];
+        $scanDate->modify('+1 day');
+
+        // Scan up to 5 years within the marriage window
+        $scanEnd = clone $marriageWindow['start'];
+        $scanEnd->modify('+5 years');
+        if ($scanEnd > $marriageWindow['end']) $scanEnd = clone $marriageWindow['end'];
+
+        while ($scanDate <= $scanEnd) {
+            $d = (int)$scanDate->format('j');
+            $m = (int)$scanDate->format('n');
+            $y = (int)$scanDate->format('Y');
+
+            $jd       = $astrologyService->getJulianDay($d, $m, $y, 10, 0, 0);
+            $ayanamsa = $astrologyService->getLahiriAyanamsa($jd);
+            $moon     = fmod($astrologyService->estimateMoonLongitude($jd) - $ayanamsa + 360, 360);
+            $sun      = fmod($astrologyService->getSunLong($jd) - $ayanamsa + 360, 360);
+
+            $tithiRaw = fmod($moon - $sun + 360, 360);
+            $tithi    = (int)($tithiRaw / 12) + 1;
+            $vara     = ((int)($jd + 1.5)) % 7;
+            $starIdx2 = (int)($moon / (360 / 27));
+            $yogaIdx  = (int)(fmod($sun + $moon, 360) / (360 / 27));
+
+            $score = 0;
+            if (in_array($tithi, $goodTithis))  $score += 30;
+            if (in_array($tithi, $badTithis))   $score -= 40;
+            if (in_array($vara, $goodVaras))    $score += 25;
+            if (in_array($vara, $badVaras))     $score -= 30;
+            if (in_array($starIdx2, $goodNakshatras) && !in_array($starIdx2, $badNakshatras)) $score += 25;
+            if (in_array($starIdx2, $badNakshatras)) $score -= 35;
+            if (in_array($yogaIdx, $goodYogas)) $score += 20;
+            if (in_array($yogaIdx, $badYogas))  $score -= 30;
+
+            if ($score >= 55) {
+                $scored[] = [
+                    'score'         => $score,
+                    'date'          => $scanDate->format('d M Y'),
+                    'day'           => $scanDate->format('l'),
+                    'date_obj'      => $scanDate->format('Y-m-d'),
+                    'tithi'         => $tithiNames[$tithi] ?? "Tithi {$tithi}",
+                    'nakshatra'     => $stars[$starIdx2],
+                    'yoga'          => $yogaNames[$yogaIdx],
+                    'vara'          => $varaNames[$vara],
+                    'quality'       => $score >= 90 ? '⭐⭐⭐ Excellent' : ($score >= 70 ? '⭐⭐ Very Good' : '⭐ Good'),
+                    'quality_color' => $score >= 90 ? '#00b894' : ($score >= 70 ? '#6c5ce7' : '#fdcb6e'),
+                    'dasha_context' => $marriageDasha['planet'] . ' Mahadasha',
+                ];
+            }
+            $scanDate->modify('+1 day');
+        }
+
+        usort($scored, fn($a, $b) => $b['score'] - $a['score']);
+
+        return [
+            'marriage_dasha'   => $marriageDasha ? [
+                'planet'    => $marriageDasha['planet'],
+                'start'     => $marriageDasha['start_str'],
+                'end'       => $marriageDasha['end_str'],
+                'years'     => $marriageDasha['years'],
+                'message'   => "Your marriage is astrologically destined during {$marriageDasha['planet']} Mahadasha ({$marriageDasha['start_str']} – {$marriageDasha['end_str']})",
+            ] : null,
+            'dasha_timeline'   => array_map(fn($d) => [
+                'planet' => $d['planet'],
+                'start'  => $d['start_str'],
+                'end'    => $d['end_str'],
+                'is_marriage_dasha' => in_array($d['planet'], $marriageDashas),
+            ], $dashas),
+            'peak_dates'       => array_slice($scored, 0, 12),
+        ];
+    }
+}
+
+        $badTithis     = [4, 9, 14, 29, 30];
+
+        // Good weekdays: Mon(1), Wed(3), Thu(4), Fri(5)
+        $goodVaras     = [1, 3, 4, 5];
+        // Bad: Sun(0), Tue(2), Sat(6)
+        $badVaras      = [0, 2, 6];
+
+        // Good nakshatras (index 0-26)
+        // Rohini(3), Mrigasira(4), Magha(9), Uttara(11), Hasta(12),
+        // Swathi(14), Anuradha(16), Uttarashada(20), Uttarabhadra(25), Revathi(26)
+        $goodNakshatras = [3, 4, 9, 11, 12, 14, 16, 20, 25, 26];
+        // Panchakam nakshatras (bad for marriage)
+        $badNakshatras  = [22, 23, 24, 25, 26]; // Avittam, Sadhayam, Pooratathi, Uthiratathi, Revathi
+        // Note: Revathi(26) is good AND in panchakam — slight penalty only
+
+        // Good yogas (index 0-26)
+        // Ayushman(2), Saubhagya(3), Shobhana(4), Vriddhi(10), Dhruva(11),
+        // Harshana(13), Siddhi(15), Sadhya(21), Shubha(22), Shukla(23)
+        $goodYogas  = [2, 3, 4, 10, 11, 13, 15, 21, 22, 23];
+        // Bad yogas: Vishkamba(0), Atiganda(5), Shoola(8), Ganda(9),
+        //            Vyaghata(12), Vajra(14), Vyatipata(16), Parigha(18), Vaidhriti(26)
+        $badYogas   = [0, 5, 8, 9, 12, 14, 16, 18, 26];
+
+        $yogaNames = ['Vishkamba','Preeti','Ayushman','Saubhagya','Shobhana','Atiganda',
+                      'Sukarman','Dhriti','Shoola','Ganda','Vriddhi','Dhruva','Vyaghata',
+                      'Harshana','Vajra','Siddhi','Vyatipata','Variyan','Parigha','Shiva',
+                      'Siddha','Sadhya','Shubha','Shukla','Brahma','Indra','Vaidhriti'];
+        $stars = ['Aswini','Bharani','Karthigai','Rohini','Mirugaseerisham','Thiruvathirai',
+                  'Punarpusam','Poosam','Ayilyam','Magam','Pooram','Uthiram','Hastham',
+                  'Chithirai','Swathi','Visakam','Anusham','Kettai','Moolam','Pooradam',
+                  'Uthiradam','Thiruvonam','Avittam','Sadhayam','Pooratathi','Uthiratathi','Revathi'];
+        $varaNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        $tithiNames = [
+            1=>'Pratipada',2=>'Dwitiya',3=>'Tritiya',4=>'Chaturthi',5=>'Panchami',
+            6=>'Shashthi',7=>'Saptami',8=>'Ashtami',9=>'Navami',10=>'Dashami',
+            11=>'Ekadashi',12=>'Dwadashi',13=>'Trayodashi',14=>'Chaturdashi',15=>'Purnima',
+            16=>'Pratipada',17=>'Dwitiya',18=>'Tritiya',19=>'Chaturthi',20=>'Panchami',
+            21=>'Shashthi',22=>'Saptami',23=>'Ashtami',24=>'Navami',25=>'Dashami',
+            26=>'Ekadashi',27=>'Dwadashi',28=>'Trayodashi',29=>'Chaturdashi',30=>'Amavasya'
+        ];
+
+        $scored = [];
+        $startDate = new \DateTime('now');
+        $startDate->modify('+30 days'); // Start from 30 days from now
+
+        for ($i = 0; $i < 730; $i++) {
+            $date = clone $startDate;
+            $date->modify("+{$i} days");
+
+            $d = (int)$date->format('j');
+            $m = (int)$date->format('n');
+            $y = (int)$date->format('Y');
+
+            $jd       = $astrologyService->getJulianDay($d, $m, $y, 10, 0, 0); // Midday
+            $ayanamsa = $astrologyService->getLahiriAyanamsa($jd);
+            $moonRaw  = $astrologyService->estimateMoonLongitude($jd);
+            $sunRaw   = $astrologyService->getSunLong($jd);
+
+            $moon = fmod($moonRaw - $ayanamsa + 360, 360);
+            $sun  = fmod($sunRaw  - $ayanamsa + 360, 360);
+
+            $tithiRaw  = fmod($moon - $sun + 360, 360);
+            $tithi     = (int)($tithiRaw / 12) + 1;
+            $vara      = ((int)($jd + 1.5)) % 7;
+            $starIdx   = (int)($moon / (360 / 27));
+            $yogaSum   = fmod($sun + $moon, 360);
+            $yogaIdx   = (int)($yogaSum / (360 / 27));
+
+            // ── SCORING ──
+            $score = 0;
+
+            // Tithi scoring
+            if (in_array($tithi, $goodTithis))  $score += 30;
+            if (in_array($tithi, $badTithis))   $score -= 40;
+
+            // Vara scoring
+            if (in_array($vara, $goodVaras))    $score += 25;
+            if (in_array($vara, $badVaras))     $score -= 30;
+
+            // Nakshatra scoring
+            if (in_array($starIdx, $goodNakshatras) && !in_array($starIdx, $badNakshatras)) $score += 25;
+            if (in_array($starIdx, $badNakshatras) && $starIdx !== 26) $score -= 35; // Revathi slight exception
+            if ($starIdx === 26) $score += 5; // Revathi is mixed
+
+            // Yoga scoring
+            if (in_array($yogaIdx, $goodYogas)) $score += 20;
+            if (in_array($yogaIdx, $badYogas))  $score -= 30;
+
+            // Skip clearly bad days
+            if ($score < 30) continue;
+
+            $scored[] = [
+                'score'     => $score,
+                'date'      => $date->format('d M Y'),
+                'day'       => $date->format('l'),
+                'date_obj'  => $date->format('Y-m-d'),
+                'tithi'     => $tithiNames[$tithi] ?? "Tithi $tithi",
+                'nakshatra' => $stars[$starIdx],
+                'yoga'      => $yogaNames[$yogaIdx],
+                'vara'      => $varaNames[$vara],
+                'quality'   => $score >= 90 ? '⭐⭐⭐ Excellent' : ($score >= 70 ? '⭐⭐ Very Good' : '⭐ Good'),
+                'quality_color' => $score >= 90 ? '#00b894' : ($score >= 70 ? '#6c5ce7' : '#fdcb6e'),
+            ];
+        }
+
+        // Sort by score descending, return top 15
+        usort($scored, fn($a, $b) => $b['score'] - $a['score']);
+        return array_slice($scored, 0, 15);
+    }
+}

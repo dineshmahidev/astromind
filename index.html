@@ -23,16 +23,30 @@
         }
 
         body {
-            background-color: var(--bg);
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
             color: var(--text);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             padding: 40px 20px;
-            background-image: 
-                radial-gradient(circle at 20% 20%, rgba(108, 92, 231, 0.15) 0%, transparent 40%),
-                radial-gradient(circle at 80% 80%, rgba(232, 67, 147, 0.15) 0%, transparent 40%);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: twinkle var(--duration) infinite ease-in-out;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
         }
 
         .container {
@@ -158,6 +172,56 @@
             display: none;
         }
 
+        .tag {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        .tag-astrologer {
+            background: rgba(108, 92, 231, 0.2);
+            color: #a29bfe;
+            border: 1px solid rgba(108, 92, 231, 0.4);
+        }
+
+        .tag-user {
+            background: rgba(0, 206, 201, 0.2);
+            color: #00cec9;
+            border: 1px solid rgba(0, 206, 201, 0.4);
+        }
+
+        .user-preview {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 15px 20px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 1.2rem;
+        }
+
         .status-dot {
             width: 10px;
             height: 10px;
@@ -181,9 +245,29 @@
 
     <div class="container">
         <header>
-            <h1>Astromind Test Page</h1>
-            <p class="subtitle">Premium Astrology API Testing Environment</p>
+            <h1>Astromind Platform</h1>
+            <p class="subtitle">Premium Astrology API Testing & Role Management</p>
         </header>
+
+        <div class="card">
+            <div class="section-title">👥 User Role Indicators</div>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <div class="user-preview">
+                    <div class="user-avatar" style="background: linear-gradient(135deg, #6c5ce7, #e84393);">A</div>
+                    <div>
+                        <div style="font-weight: 600;">Dr. Arjun (Astrologer)</div>
+                        <span class="tag tag-astrologer">✨ Astrologer</span>
+                    </div>
+                </div>
+                <div class="user-preview">
+                    <div class="user-avatar" style="background: linear-gradient(135deg, #00cec9, #00b894);">D</div>
+                    <div>
+                        <div style="font-weight: 600;">Dinesh Kumar (User)</div>
+                        <span class="tag tag-user">👤 User</span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div class="card">
             <div class="section-title">
@@ -230,6 +314,24 @@
 
     <script>
         const BASE_URL = 'http://10.73.33.139:8000/api';
+
+        function createStars() {
+            const container = document.body;
+            const starCount = 50;
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 3 + 1;
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.setProperty('--duration', `${Math.random() * 3 + 2}s`);
+                star.style.animationDelay = `${Math.random() * 5}s`;
+                container.appendChild(star);
+            }
+        }
+        window.addEventListener('DOMContentLoaded', createStars);
 
         async function testAIChat() {
             const message = document.getElementById('ai-message').value;
