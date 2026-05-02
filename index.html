@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Astromind API Tester</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6c5ce7;
+            --secondary: #e84393;
+            --bg: #050510;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --text: #ffffff;
+            --text-dim: rgba(255, 255, 255, 0.6);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(108, 92, 231, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(232, 67, 147, 0.15) 0%, transparent 40%);
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #a29bfe, #e84393);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            color: var(--text-dim);
+            font-size: 1.1rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(108, 92, 231, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        #result {
+            margin-top: 30px;
+            background: #000;
+            padding: 20px;
+            border-radius: 16px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            color: #00ff00;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #333;
+            display: none;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .online { background-color: #00b894; }
+        .offline { background-color: #ff7675; }
+
+        footer {
+            margin-top: 50px;
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Astromind Test Page</h1>
+            <p class="subtitle">Premium Astrology API Testing Environment</p>
+        </header>
+
+        <div class="card">
+            <div class="section-title">
+                <span class="status-dot online"></span>
+                Backend Status
+            </div>
+            <p id="status-text">Server: http://10.73.33.139:8000</p>
+        </div>
+
+        <div class="card">
+            <div class="section-title">✨ Test AI Chat</div>
+            <div class="input-group">
+                <label>Message</label>
+                <input type="text" id="ai-message" placeholder="e.g. Today's horoscope for Kumbam">
+            </div>
+            <div class="input-group">
+                <label>Language</label>
+                <select id="ai-lang">
+                    <option value="en">English</option>
+                    <option value="ta">Tamil (தமிழ்)</option>
+                    <option value="hi">Hindi (हिंदी)</option>
+                </select>
+            </div>
+            <div class="btn-group">
+                <button class="btn-primary" onclick="testAIChat()">Send to AI</button>
+                <button class="btn-secondary" onclick="clearResult()">Clear</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="section-title">🪐 Test Astrology Data</div>
+            <div class="btn-group">
+                <button class="btn-secondary" onclick="testHoroscope()">Daily Horoscope (Kumbam)</button>
+                <button class="btn-secondary" onclick="testPanchang()">Get Current Panchang</button>
+            </div>
+        </div>
+
+        <pre id="result"></pre>
+
+        <footer>
+            Built for Astromind Development &copy; 2026
+        </footer>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://10.73.33.139:8000/api';
+
+        async function testAIChat() {
+            const message = document.getElementById('ai-message').value;
+            const lang = document.getElementById('ai-lang').value;
+            const resultEl = document.getElementById('result');
+
+            if (!message) {
+                alert('Please enter a message');
+                return;
+            }
+
+            showResult('Sending request...');
+
+            try {
+                const response = await fetch(`${BASE_URL}/ai/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        lang: lang,
+                        user_context: {
+                            name: 'Test User',
+                            rasi: 'Kumbam',
+                            rasi_idx: 10,
+                            day: 2,
+                            month: 5,
+                            year: 2026,
+                            hour: 12,
+                            minute: 30
+                        }
+                    })
+                });
+                const data = await response.json();
+                showResult(JSON.stringify(data, null, 4));
+            } catch (error) {
+                showResult('Error: ' + error.message);
+            }
+        }
+
+        async function testHoroscope() {
+            showResult('Fetching horoscope...');
+            try {
+                const response = await fetch(`${BASE_URL}/astrology/horoscope?sign_idx=10&period=daily&lang=ta`);
+                const data = await response.json();
+                showResult(JSON.stringify(data, null, 4));
+            } catch (error) {
+                showResult('Error: ' + error.message);
+            }
+        }
+
+        async function testPanchang() {
+            showResult('Fetching current details...');
+            try {
+                const now = new Date();
+                const response = await fetch(`${BASE_URL}/astrology/details?day=${now.getDate()}&month=${now.getMonth()+1}&year=${now.getFullYear()}&hour=${now.getHours()}&minute=${now.getMinutes()}&second=0`);
+                const data = await response.json();
+                showResult(JSON.stringify(data, null, 4));
+            } catch (error) {
+                showResult('Error: ' + error.message);
+            }
+        }
+
+        function showResult(text) {
+            const el = document.getElementById('result');
+            el.style.display = 'block';
+            el.textContent = text;
+        }
+
+        function clearResult() {
+            document.getElementById('result').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
