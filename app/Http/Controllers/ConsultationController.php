@@ -58,66 +58,71 @@ class ConsultationController extends Controller
     }
 
     /**
-     * Get messages between user and astrologer (mock).
+     * Save a message to the database.
      */
-    public function getMessages(Request $request)
-    {
-        $astrologerId = $request->astrologer_id;
-
-        return response()->json([
-            'success' => true,
-            'messages' => [
-                ['id' => 1, 'sender' => 'astrologer', 'type' => 'text', 'content' => 'Vanakkam! How can I help you today?', 'time' => '10:00 AM'],
-                ['id' => 2, 'sender' => 'user', 'type' => 'text', 'content' => 'I have a question about my career.', 'time' => '10:01 AM'],
-            ]
-        ]);
-    }
-
-    /**
-     * Initiate a call request.
-     */
-    public function initiateCall(Request $request)
-    {
-        $type = $request->type; // 'audio' or 'video'
-        $astrologerId = $request->astrologer_id;
-        $channelName = 'call_' . $astrologerId . '_' . time();
-
-        // In production, broadcast a Pusher event here to notify the astrologer
-        // event(new CallInitiated($channelName, $type, $astrologerId));
-
-        return response()->json([
-            'success' => true,
-            'channel' => $channelName,
-            'type' => $type,
-            'message' => 'Call request sent to astrologer. Please wait...',
-        ]);
-    }
-    /**
-     * Submit a question to an astrologer.
-     */
-    public function submitQuestion(Request $request)
+    public function saveMessage(Request $request)
     {
         $request->validate([
-            'user_id' => 'required',
-            'astrologer_id' => 'required',
-            'question' => 'required',
+            'sender_id' => 'required',
+            'receiver_id' => 'required',
+            'content' => 'required',
+            'type' => 'required|string',
+        ]);
+
+        $message = \App\Models\Message::create([
+            'consultation_id' => $request->consultation_id,
+            'sender_id' => $request->sender_id,
+            'receiver_id' => $request->receiver_id,
+            'type' => $request->type,
+            'content' => $request->content,
+            'duration' => $request->duration,
+        ]);
+
+        return response()->json(['success' => true, 'message' => $message]);
+    }
+
+    /**
+     * Get chat history between two users.
+     */
+    public function getChatHistory(Request $request)
+    {
+        $userId = $request->user_id;
+        $astrologerId = $request->astrologer_id;
+
+        $messages = \App\Models\Message::where(function($q) use ($userId, $astrologerId) {
+            $q->where('sender_id', $userId)->where('receiver_id', $astrologerId);
+        })->orWhere(function($q) use ($userId, $astrologerId) {
+            $q->where('sender_id', $astrologerId)->where('receiver_id', $userId);
+        })->orderBy('created_at', 'asc')->get();
+
+        return response()->json(['success' => true, 'messages' => $messages]);
+    }
+
+    /**
+     * End a consultation and save duration/amount.
+     */
+    public function endConsultation(Request $request)
+    {
+        $request->validate([
+            'consultation_id' => 'required',
+            'duration' => 'required|integer',
             'amount' => 'required|numeric',
         ]);
 
-        $consultation = \App\Models\Consultation::create([
-            'user_id' => $request->user_id,
-            'astrologer_id' => $request->astrologer_id,
-            'question' => $request->question,
-            'amount_paid' => $request->amount,
-            'status' => ($request->is_video_call || $request->is_audio_call) ? 'active' : 'pending',
-            'is_video_call' => $request->is_video_call ?? false,
-            'is_audio_call' => $request->is_audio_call ?? false,
-        ]);
+        $consultation = \App\Models\Consultation::find($request->consultation_id);
+        if ($consultation) {
+            $consultation->duration = $request->duration;
+            $consultation->amount_paid = $request->amount;
+            $consultation->status = 'closed';
+            $consultation->end_time = now();
+            $consultation->save();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Question sent successfully to the astrologer.',
-            'consultation' => $consultation
-        ]);
+            // Here you would also deduct amount from user wallet
+            // $user = $consultation->user;
+            // $user->wallet_balance -= $request->amount;
+            // $user->save();
+        }
+
+        return response()->json(['success' => true]);
     }
 }

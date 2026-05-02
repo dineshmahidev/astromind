@@ -12,4 +12,9 @@ class Astrologer extends Model
     protected $fillable = [
         'user_id', 'name', 'specialization', 'experience', 'languages', 'bio', 'price_per_minute', 'rating', 'profile_image', 'is_online', 'city'
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

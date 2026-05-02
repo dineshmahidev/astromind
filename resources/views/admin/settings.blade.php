@@ -62,6 +62,30 @@
                 </button>
             </div>
         </form>
+    <div class="card p-8">
+        <div class="flex items-center gap-4 mb-8">
+            <div class="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-500">
+                <i class="fas fa-robot text-xl"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-bold">AI Engine Configuration</h3>
+                <p class="text-gray-500 text-sm">Manage Grok (xAI) API credentials</p>
+            </div>
+        </div>
+
+        <form action="/admin/settings" method="POST" class="space-y-6">
+            @csrf
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Grok (xAI) API Key</label>
+                <input type="password" name="grok_api_key" value="{{ $settings['grok_api_key'] ?? '' }}" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="xai-..." />
+            </div>
+
+            <div class="pt-4 border-t border-white/5">
+                <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-amber-500/20 transition-all active:scale-95">
+                    Update AI Credentials
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 @endsection

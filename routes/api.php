@@ -19,9 +19,9 @@ Route::get('/astrology/horoscope', [AstrologyController::class, 'getHoroscope'])
 // Consultation Routes
 Route::post('/consultation/voice-message', [ConsultationController::class, 'uploadVoiceMessage']);
 Route::post('/consultation/call-token', [ConsultationController::class, 'generateCallToken']);
-Route::post('/consultation/initiate-call', [ConsultationController::class, 'initiateCall']);
-Route::get('/consultation/messages', [ConsultationController::class, 'getMessages']);
-Route::post('/consultation/send', [ConsultationController::class, 'submitQuestion']);
+Route::get('/chat/history', [ConsultationController::class, 'getChatHistory']);
+Route::post('/chat/save', [ConsultationController::class, 'saveMessage']);
+Route::post('/consultation/end', [ConsultationController::class, 'endConsultation']);
 
 // Payment Routes
 Route::post('/payment/dummy', [PaymentController::class, 'dummy']);
@@ -35,3 +35,10 @@ Route::post('/ai/chat', [\App\Http\Controllers\AIController::class, 'chat']);
 // Astrologers
 Route::get('/astrologers', [\App\Http\Controllers\AstrologerController::class, 'index']);
 Route::post('/astrologers', [\App\Http\Controllers\AstrologerController::class, 'store']);
+Route::post('/astrologer/update-profile', [\App\Http\Controllers\AstrologerController::class, 'updateProfile']);
+Route::get('/astrologer/stats', [\App\Http\Controllers\AstrologerController::class, 'getStats']);
+
+// Settings & API Keys
+Route::get('/settings', [\App\Http\Controllers\SettingController::class, 'getSetting']);
+Route::post('/settings', [\App\Http\Controllers\SettingController::class, 'saveSetting']);
+Route::get('/settings/public', [\App\Http\Controllers\SettingController::class, 'getPublicSettings']);

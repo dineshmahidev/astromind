@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Services\AstrologyService;
+use Illuminate\Support\Facades\DB;
 
 class AIController extends Controller
 {
@@ -43,10 +44,44 @@ class AIController extends Controller
             // We can also get nakshatra from getDetails if needed, but sign is the main one for horoscope
         }
 
-        // Try to identify the intent from the message
-        $reply = "";
+        // CHECK FOR GROK API KEY IN SETTINGS
+        $grokKey = DB::table('settings')->where('key', 'grok_api_key')->first();
+        
+        if ($grokKey && !empty($grokKey->value)) {
+            try {
+                $client = new \GuzzleHttp\Client();
+                $prompt = "You are AstroMind, a professional Vedic Astrologer. Use the following context: User Name: {$name}, Rasi: {$rasi}, Nakshatra: {$nakshatra}. The user asked: '{$message}'. Reply in " . ($lang == 'ta' ? 'Tamil' : ($lang == 'hi' ? 'Hindi' : 'English')) . ". Keep it spiritual and insightful.";
+                
+                $res = $client->post('https://api.x.ai/v1/chat/completions', [
+                    'headers' => [
+                        'Authorization' => 'Bearer ' . $grokKey->value,
+                        'Content-Type' => 'application/json',
+                    ],
+                    'json' => [
+                        'model' => 'grok-beta',
+                        'messages' => [
+                            ['role' => 'system', 'content' => 'You are an elite Vedic astrologer.'],
+                            ['role' => 'user', 'content' => $prompt]
+                        ],
+                        'temperature' => 0.7
+                    ]
+                ]);
+                
+                $aiResult = json_decode($res->getBody()->getContents(), true);
+                $reply = $aiResult['choices'][0]['message']['content'] ?? null;
+                
+                if ($reply) {
+                    return response()->json(['success' => true, 'reply' => $reply]);
+                }
+            } catch (\Exception $e) {
+                // Log error and fallback to local rules
+                \Log::error('Grok AI Error: ' . $e->getMessage());
+            }
+        }
 
+        // FALLBACK TO LOCAL RULES (if Grok fails or no key)
         if (str_contains($message, 'horoscope') || str_contains($message, 'day today') || str_contains($message, 'ராசிபலன்') || str_contains($message, 'राशिफल')) {
+            // ... (rest of local logic)
             // Real calculation for Daily Horoscope
             if ($rasiIdx !== null) {
                 $data = $this->astrologyService->getHoroscope($rasiIdx, 'daily', $lang);

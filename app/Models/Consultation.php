@@ -16,7 +16,16 @@ class Consultation extends Model
         'is_video_call',
         'is_audio_call',
         'video_call_room',
+        'duration',
+        'start_time',
+        'end_time',
+        'call_type'
     ];
+
+    public function messages()
+    {
+        return $this->hasMany(Message::class);
+    }
 
     public function user()
     {

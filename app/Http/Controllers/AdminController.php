@@ -35,15 +35,53 @@ class AdminController extends Controller
         return view('admin.users', compact('users'));
     }
 
+    public function storeUser(Request $request)
+    {
+        $request->validate([
+            'name' => 'required',
+            'email' => 'required|email|unique:users',
+            'password' => 'required|min:6'
+        ]);
+
+        User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role' => 'user',
+            'wallet_balance' => $request->wallet_balance ?? 0.00,
+        ]);
+
+        return back()->with('success', 'User created successfully');
+    }
+
     public function deleteUser($id)
     {
         User::destroy($id);
         return back()->with('success', 'User deleted successfully');
     }
 
+    public function updateUser(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+        $data = [
+            'name' => $request->name,
+            'email' => $request->email,
+            'wallet_balance' => $request->wallet_balance,
+            'is_premium' => $request->has('is_premium'),
+        ];
+
+        if ($request->filled('password')) {
+            $data['password'] = Hash::make($request->password);
+        }
+
+        $user->update($data);
+
+        return back()->with('success', 'User updated successfully');
+    }
+
     public function astrologers()
     {
-        $astrologers = \App\Models\Astrologer::latest()->get();
+        $astrologers = \App\Models\Astrologer::with('user')->latest()->get();
         return view('admin.astrologers', compact('astrologers'));
     }
 
@@ -55,43 +93,92 @@ class AdminController extends Controller
             'password' => 'required|min:6',
             'specialization' => 'required',
             'experience' => 'required|numeric',
+            'phone' => 'required',
+            'city' => 'required',
             'price_per_minute' => 'required|numeric',
         ]);
 
-        // 1. Create User account for login
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'phone' => $request->phone,
-            'role' => 'astrologer',
-        ]);
+        try {
+            \DB::beginTransaction();
 
-        // 2. Handle Profile Image Upload
-        $profileImagePath = null;
-        if ($request->hasFile('profile_image')) {
-            $path = $request->file('profile_image')->store('astrologers', 'public');
-            $profileImagePath = asset('storage/' . $path);
-        } else {
-            // Fallback to consistent vector based on ID
-            $profileImagePath = 'https://i.pravatar.cc/200?u=' . $user->id;
+            // 1. Create User account for login
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'phone' => $request->phone,
+                'role' => 'astrologer',
+            ]);
+
+            // 2. Handle Profile Image Upload
+            $profileImagePath = null;
+            if ($request->hasFile('profile_image')) {
+                $path = $request->file('profile_image')->store('astrologers', 'public');
+                $profileImagePath = asset('storage/' . $path);
+            } else {
+                // Fallback to consistent vector based on ID
+                $profileImagePath = 'https://i.pravatar.cc/200?u=' . $user->id;
+            }
+
+            // 3. Create detailed Astrologer profile
+            \App\Models\Astrologer::create([
+                'user_id' => $user->id,
+                'name' => $request->name,
+                'specialization' => $request->specialization,
+                'experience' => $request->experience,
+                'languages' => $request->languages ?? 'English, Tamil',
+                'bio' => $request->bio ?? 'Professional Astrologer',
+                'city' => $request->city,
+                'price_per_minute' => $request->price_per_minute,
+                'profile_image' => $profileImagePath,
+                'is_online' => true,
+            ]);
+
+            \DB::commit();
+            return back()->with('success', 'Astrologer profile and login credentials created successfully.');
+            
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return back()->withErrors(['error' => 'Failed to create astrologer: ' . $e->getMessage()])->withInput();
+        }
+    }
+
+    public function updateAstrologer(Request $request, $id)
+    {
+        $astrologer = \App\Models\Astrologer::findOrFail($id);
+        
+        $data = $request->only([
+            'name', 'specialization', 'experience', 'price_per_minute', 
+            'languages', 'bio', 'city'
+        ]);
+        
+        $data['is_online'] = $request->has('is_online');
+
+        $astrologer->update($data);
+
+        // Update linked user details (Email & Password) if provided
+        $user = User::find($astrologer->user_id);
+        if ($user) {
+            $userUpdateData = [];
+            if ($request->filled('email')) {
+                $userUpdateData['email'] = $request->email;
+            }
+            if ($request->filled('password')) {
+                $userUpdateData['password'] = Hash::make($request->password);
+            }
+            if ($request->filled('name')) {
+                $userUpdateData['name'] = $request->name;
+            }
+            
+            // Force role to astrologer to ensure dashboard access
+            $userUpdateData['role'] = 'astrologer';
+            
+            if (!empty($userUpdateData)) {
+                $user->update($userUpdateData);
+            }
         }
 
-        // 3. Create detailed Astrologer profile
-        \App\Models\Astrologer::create([
-            'user_id' => $user->id,
-            'name' => $request->name,
-            'specialization' => $request->specialization,
-            'experience' => $request->experience,
-            'languages' => $request->languages ?? 'English, Tamil',
-            'bio' => $request->bio,
-            'city' => $request->city,
-            'price_per_minute' => $request->price_per_minute,
-            'profile_image' => $profileImagePath,
-            'is_online' => true,
-        ]);
-
-        return back()->with('success', 'Astrologer profile and login credentials created successfully.');
+        return back()->with('success', 'Astrologer profile updated successfully.');
     }
 
     public function plans()
