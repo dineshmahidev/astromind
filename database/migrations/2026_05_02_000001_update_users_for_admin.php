@@ -7,23 +7,31 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            if (!Schema::hasColumn('users', 'role')) {
-                $table->string('role')->default('user'); // admin, user, astrologer
-            }
-            if (!Schema::hasColumn('users', 'is_premium')) {
+        if (!Schema::hasColumn('users', 'role')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->string('role')->default('user');
+            });
+        }
+        if (!Schema::hasColumn('users', 'is_premium')) {
+            Schema::table('users', function (Blueprint $table) {
                 $table->boolean('is_premium')->default(false);
-            }
-            if (!Schema::hasColumn('users', 'wallet_balance')) {
+            });
+        }
+        if (!Schema::hasColumn('users', 'wallet_balance')) {
+            Schema::table('users', function (Blueprint $table) {
                 $table->decimal('wallet_balance', 10, 2)->default(0);
-            }
-            if (!Schema::hasColumn('users', 'phone')) {
+            });
+        }
+        if (!Schema::hasColumn('users', 'phone')) {
+            Schema::table('users', function (Blueprint $table) {
                 $table->string('phone')->nullable();
-            }
-            if (!Schema::hasColumn('users', 'avatar')) {
+            });
+        }
+        if (!Schema::hasColumn('users', 'avatar')) {
+            Schema::table('users', function (Blueprint $table) {
                 $table->string('avatar')->nullable();
-            }
-        });
+            });
+        }
     }
 
     public function down(): void

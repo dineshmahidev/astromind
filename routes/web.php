@@ -27,3 +27,15 @@ Route::prefix('admin')->group(function () {
     Route::get('/settings', [AdminController::class, 'settings']);
     Route::post('/settings', [AdminController::class, 'updateSettings']);
 });
+
+Route::get('/login', function () {
+    return view('welcome'); // Or a dedicated login view
+})->name('login');
+
+// Expert (Astrologer/Palm Reader) Routes
+Route::prefix('expert')->middleware(['auth'])->group(function () {
+    Route::get('/dashboard', [\App\Http\Controllers\ExpertController::class, 'dashboard']);
+    Route::get('/consultations', [\App\Http\Controllers\ExpertController::class, 'consultations']);
+    Route::get('/profile', [\App\Http\Controllers\ExpertController::class, 'profile']);
+    Route::post('/profile', [\App\Http\Controllers\ExpertController::class, 'updateProfile']);
+});

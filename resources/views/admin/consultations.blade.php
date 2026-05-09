@@ -8,9 +8,16 @@
     <div class="lg:col-span-1 card flex flex-col overflow-hidden">
         <div class="p-4 border-b border-white/10 bg-white/5">
             <h3 class="font-bold mb-2">Recent Queries</h3>
-            <div class="flex gap-2">
-                <button class="flex-1 text-[10px] bg-indigo-500 text-white py-1 rounded font-bold uppercase">All</button>
-                <button class="flex-1 text-[10px] bg-white/5 text-gray-500 py-1 rounded font-bold uppercase">Pending</button>
+            <div class="flex flex-col gap-2">
+                <div class="flex gap-1 bg-black/20 p-1 rounded-lg">
+                    <a href="/admin/consultations?category=all" class="flex-1 text-[9px] {{ request('category', 'all') == 'all' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-white' }} py-1.5 rounded font-bold uppercase text-center transition-all">All</a>
+                    <a href="/admin/consultations?category=astrologer" class="flex-1 text-[9px] {{ request('category') == 'astrologer' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-white' }} py-1.5 rounded font-bold uppercase text-center transition-all">Astrologer</a>
+                    <a href="/admin/consultations?category=palm_reader" class="flex-1 text-[9px] {{ request('category') == 'palm_reader' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-white' }} py-1.5 rounded font-bold uppercase text-center transition-all">Palm Reader</a>
+                </div>
+                <div class="flex gap-2">
+                    <a href="/admin/consultations?status=all" class="flex-1 text-[10px] {{ request('status', 'all') == 'all' ? 'border-b-2 border-indigo-500 text-indigo-400' : 'text-gray-500' }} py-1 font-bold uppercase text-center">Recent</a>
+                    <a href="/admin/consultations?status=pending" class="flex-1 text-[10px] {{ request('status') == 'pending' ? 'border-b-2 border-rose-500 text-rose-400' : 'text-gray-500' }} py-1 font-bold uppercase text-center">Pending</a>
+                </div>
             </div>
         </div>
         <div class="flex-1 overflow-y-auto">

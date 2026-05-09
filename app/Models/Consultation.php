@@ -19,7 +19,11 @@ class Consultation extends Model
         'duration',
         'start_time',
         'end_time',
-        'call_type'
+        'call_type',
+        'rating',
+        'review',
+        'admin_commission',
+        'expert_amount'
     ];
 
     public function messages()
@@ -32,8 +36,13 @@ class Consultation extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    public function expert()
+    {
+        return $this->belongsTo(Astrologer::class, 'astrologer_id');
+    }
+
     public function astrologer()
     {
-        return $this->belongsTo(User::class, 'astrologer_id');
+        return $this->belongsTo(Astrologer::class, 'astrologer_id');
     }
 }

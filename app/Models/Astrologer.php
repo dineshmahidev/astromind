@@ -10,11 +10,16 @@ class Astrologer extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id', 'name', 'specialization', 'experience', 'languages', 'bio', 'price_per_minute', 'rating', 'profile_image', 'is_online', 'city'
+        'user_id', 'name', 'specialization', 'category', 'experience', 'languages', 'bio', 'price_per_minute', 'rating', 'profile_image', 'is_online', 'city', 'wallet_balance'
     ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function transactions()
+    {
+        return $this->hasMany(ExpertTransaction::class);
     }
 }

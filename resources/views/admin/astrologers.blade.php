@@ -47,6 +47,7 @@
                         price_per_minute: {{ $astro->price_per_minute }},
                         languages: '{{ addslashes($astro->languages) }}',
                         bio: '{{ addslashes($astro->bio) }}',
+                        category: '{{ $astro->category }}',
                         is_online: {{ $astro->is_online }}
                     })" 
                     class="p-2 text-gray-500 hover:text-indigo-400 transition"
@@ -96,6 +97,13 @@
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Specialization</label>
                     <input type="text" name="specialization" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500" placeholder="Vedic, Vastu" />
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Expert Category</label>
+                    <select name="category" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500">
+                        <option value="astrologer" class="bg-[#0d0d1f]">Astrologer</option>
+                        <option value="palm_reader" class="bg-[#0d0d1f]">Palm Reader</option>
+                    </select>
                 </div>
             </div>
             <div class="grid grid-cols-2 gap-4">
@@ -154,6 +162,13 @@
                         <input type="text" name="specialization" id="edit_spec" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-indigo-500" />
                     </div>
                     <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-2 tracking-widest">Category</label>
+                        <select name="category" id="edit_category" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-indigo-500">
+                            <option value="astrologer" class="bg-[#0d0d1f]">Astrologer</option>
+                            <option value="palm_reader" class="bg-[#0d0d1f]">Palm Reader</option>
+                        </select>
+                    </div>
+                    <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-2 tracking-widest">City</label>
                         <input type="text" name="city" id="edit_city" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-indigo-500" />
                     </div>
@@ -203,6 +218,7 @@
         document.getElementById('edit_price').value = astro.price_per_minute;
         document.getElementById('edit_langs').value = astro.languages;
         document.getElementById('edit_bio').value = astro.bio;
+        document.getElementById('edit_category').value = astro.category;
         document.getElementById('edit_online').checked = astro.is_online == 1;
         document.getElementById('editAstroModal').classList.remove('hidden');
     }

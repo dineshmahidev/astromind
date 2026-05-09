@@ -46,5 +46,15 @@ class SettingController extends Controller
     {
         $settings = DB::table('settings')->where('group', 'public')->get();
         return response()->json(['success' => true, 'settings' => $settings]);
+    /**
+     * Get ZegoCloud configuration from environment.
+     */
+    public function getZegoConfig()
+    {
+        return response()->json([
+            'success' => true,
+            'app_id' => env('ZEGO_APP_ID'),
+            'app_sign' => env('ZEGO_APP_SIGN')
+        ]);
     }
 }

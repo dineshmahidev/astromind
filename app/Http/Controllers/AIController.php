@@ -37,11 +37,14 @@ class AIController extends Controller
             $nakshatra = $calc['nakshatra'];
         }
 
+        $dob = $userContext['dob'] ?? ($userContext['date'] ?? 'Unknown');
+        $tob = $userContext['tob'] ?? ($userContext['time'] ?? 'Unknown');
+        $pob = $userContext['pob'] ?? ($userContext['place'] ?? 'Unknown');
+
         // Ensure Rasi and Nakshatra names match the index being used for calculation
         if ($rasiIdx !== null) {
             $calcData = $this->astrologyService->getHoroscope($rasiIdx, 'daily', $lang);
             $rasi = $calcData['sign'];
-            // We can also get nakshatra from getDetails if needed, but sign is the main one for horoscope
         }
 
         // CHECK FOR GROK API KEY IN SETTINGS
@@ -50,33 +53,43 @@ class AIController extends Controller
         if ($grokKey && !empty($grokKey->value)) {
             try {
                 $client = new \GuzzleHttp\Client();
-                $prompt = "You are AstroMind, a professional Vedic Astrologer. Use the following context: User Name: {$name}, Rasi: {$rasi}, Nakshatra: {$nakshatra}. The user asked: '{$message}'. Reply in " . ($lang == 'ta' ? 'Tamil' : ($lang == 'hi' ? 'Hindi' : 'English')) . ". Keep it spiritual and insightful.";
+                $systemPrompt = "You are AstroMind, a professional Vedic Astrologer. Give answers that are **brief, direct, and highly relevant**. " .
+                               "Context: Name: {$name}, DOB: {$dob}, TOB: {$tob}, POB: {$pob}, Rasi: {$rasi}, Nakshatra: {$nakshatra}. " .
+                               "Always reply in " . ($lang == 'ta' ? 'Tamil (தமிழ்)' : ($lang == 'hi' ? 'Hindi (हिन्दी)' : 'English')) . ".";
                 
-                $res = $client->post('https://api.x.ai/v1/chat/completions', [
+                // Using Groq API (as provided key is gsk_...)
+                $res = $client->post('https://api.groq.com/openai/v1/chat/completions', [
                     'headers' => [
                         'Authorization' => 'Bearer ' . $grokKey->value,
                         'Content-Type' => 'application/json',
                     ],
                     'json' => [
-                        'model' => 'grok-beta',
+                        'model' => 'llama-3.3-70b-versatile',
                         'messages' => [
-                            ['role' => 'system', 'content' => 'You are an elite Vedic astrologer.'],
-                            ['role' => 'user', 'content' => $prompt]
+                            ['role' => 'system', 'content' => $systemPrompt],
+                            ['role' => 'user', 'content' => $message]
                         ],
-                        'temperature' => 0.7
-                    ]
+                        'temperature' => 0.7,
+                        'max_tokens' => 1024
+                    ],
+                    'timeout' => 20
                 ]);
                 
                 $aiResult = json_decode($res->getBody()->getContents(), true);
                 $reply = $aiResult['choices'][0]['message']['content'] ?? null;
                 
                 if ($reply) {
-                    return response()->json(['success' => true, 'reply' => $reply]);
+                    return response()->json([
+                        'success' => true, 
+                        'reply' => $reply,
+                        'source' => 'groq'
+                    ]);
                 }
             } catch (\Exception $e) {
-                // Log error and fallback to local rules
-                \Log::error('Grok AI Error: ' . $e->getMessage());
+                \Log::error('Groq AI Failed: ' . $e->getMessage());
             }
+        } else {
+            \Log::warning('Groq API Key is missing in settings table.');
         }
 
         // FALLBACK TO LOCAL RULES (if Grok fails or no key)

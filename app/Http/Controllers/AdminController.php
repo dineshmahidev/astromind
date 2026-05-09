@@ -125,6 +125,7 @@ class AdminController extends Controller
                 'user_id' => $user->id,
                 'name' => $request->name,
                 'specialization' => $request->specialization,
+                'category' => $request->category ?? 'astrologer',
                 'experience' => $request->experience,
                 'languages' => $request->languages ?? 'English, Tamil',
                 'bio' => $request->bio ?? 'Professional Astrologer',
@@ -148,7 +149,7 @@ class AdminController extends Controller
         $astrologer = \App\Models\Astrologer::findOrFail($id);
         
         $data = $request->only([
-            'name', 'specialization', 'experience', 'price_per_minute', 
+            'name', 'specialization', 'category', 'experience', 'price_per_minute', 
             'languages', 'bio', 'city'
         ]);
         
@@ -193,9 +194,21 @@ class AdminController extends Controller
         return back()->with('success', 'Plan created successfully');
     }
 
-    public function consultations()
+    public function consultations(Request $request)
     {
-        $consultations = Consultation::with(['user', 'astrologer'])->latest()->get();
+        $query = Consultation::with(['user', 'astrologer']);
+        
+        if ($request->has('category') && $request->category != 'all') {
+            $query->whereHas('astrologer', function($q) use ($request) {
+                $q->where('category', $request->category);
+            });
+        }
+
+        if ($request->has('status') && $request->status != 'all') {
+            $query->where('status', $request->status);
+        }
+
+        $consultations = $query->latest()->get();
         return view('admin.consultations', compact('consultations'));
     }
 
