@@ -384,6 +384,19 @@ class ConsultationController extends Controller
         return response()->json(['success' => true]);
     }
 
+    public function markAsRead(Request $request)
+    {
+        $consultationId = $request->consultation_id;
+        $userId = $request->user_id;
+
+        \App\Models\Message::where('consultation_id', $consultationId)
+            ->where('receiver_id', $userId)
+            ->where('is_read', 0)
+            ->update(['is_read' => 1]);
+
+        return response()->json(['success' => true]);
+    }
+
     public function getUserHistory(Request $request)
     {
         $userId = $request->user_id;

@@ -106,18 +106,21 @@ class AstrologyController extends Controller
         }
     }
 
+
     public function getHoroscope(Request $request)
     {
         $request->validate([
             'sign_idx' => 'required|integer',
             'period' => 'required|string',
-            'lang' => 'nullable|string'
+            'lang' => 'nullable|string',
+            'birth_star_idx' => 'nullable|integer'
         ]);
 
         $data = $this->astrologyService->getHoroscope(
             $request->sign_idx,
             $request->period,
-            $request->lang ?? 'en'
+            $request->lang ?? 'en',
+            $request->birth_star_idx
         );
 
         return response()->json([
@@ -135,6 +138,7 @@ class AstrologyController extends Controller
             'hour' => 'required|numeric',
             'minute' => 'required|numeric',
             'category' => 'required|string',
+            'q_idx' => 'nullable|integer',
             'lang' => 'nullable|string'
         ]);
 
@@ -145,7 +149,8 @@ class AstrologyController extends Controller
             $request->hour,
             $request->minute,
             $request->category,
-            $request->lang ?? 'en'
+            $request->lang ?? 'en',
+            $request->q_idx ?? 0
         );
 
         return response()->json($data);

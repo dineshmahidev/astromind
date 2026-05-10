@@ -24,6 +24,7 @@ Route::post('/consultation/call-token', [ConsultationController::class, 'generat
 Route::get('/consultation/messages', [ConsultationController::class, 'getConsultationMessages']);
 Route::get('/consultation/detail', [ConsultationController::class, 'getConsultationDetail']);
 Route::get('/chat/history', [ConsultationController::class, 'getChatHistory']);
+Route::post('/chat/mark-read', [ConsultationController::class, 'markAsRead']);
 Route::post('/chat/save', [ConsultationController::class, 'saveMessage']);
 Route::post('/consultation/end', [ConsultationController::class, 'endConsultation']);
 Route::post('/consultation/send', [ConsultationController::class, 'startConsultation']);
@@ -38,6 +39,7 @@ Route::post('/marriage/predict', [MarriageController::class, 'predict']);
 
 // AI Chat
 Route::post('/ai/chat', [\App\Http\Controllers\AIController::class, 'chat']);
+Route::post('/ai/sync-quota', [\App\Http\Controllers\AIController::class, 'syncQuota']);
 
 // Astrologers
 Route::get('/astrologers', [\App\Http\Controllers\AstrologerController::class, 'index']);
